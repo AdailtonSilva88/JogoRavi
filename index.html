@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 
 <head>
@@ -15,7 +14,6 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      color: #333;
     }
 
     .app {
@@ -36,8 +34,9 @@
     }
 
     img {
-      width: 300px;
-      height: 300px;
+      width: 80%;
+      max-width: 300px;
+      height: auto;
       object-fit: contain;
       border-radius: 15px;
       border: 3px solid #ffb347;
@@ -112,10 +111,8 @@
     <p>Pontos: <span id="score">0</span></p>
   </div>
 
-  <!-- Sons -->
-
-  <audio id="sound-correct" src="https://www.soundjay.com/buttons/sounds/button-14.mp3"></audio> <audio id="sound-wrong"
-    src="https://www.soundjay.com/buttons/sounds/button-10.mp3" ></audio>
+  <audio id="sound-correct" src="https://www.soundjay.com/buttons/sounds/button-14.mp3"></audio>
+  <audio id="sound-wrong" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
   <script>
     const animals = [
@@ -125,13 +122,13 @@
       { name: "galinha", img: "imagens/galinha.jpg" },
       { name: "gato", img: "imagens/gato.jpg" },
       { name: "girafa", img: "imagens/girafa.jpg" },
-      { name: "jacaré", img: "imagens/jacare.jpg" },
-      { name: "leão", img: "imagens/leao.jpg" },
+      { name: "jacaré", img: "imagens/jacaré.jpg" },
+      { name: "leão", img: "imagens/leão.jpg" },
       { name: "vaca", img: "imagens/vaca.jpg" },
       { name: "zebra", img: "imagens/zebra.jpg" },
       { name: "porco", img: "imagens/porco.jpg" },
       { name: "martelo", img: "imagens/martelo.jpg" },
-      { name: ["papai noel", "noel"], img: "imagens/papai-noel.jpg" },
+      { name: "papai noel", img: "imagens/papai-noel.jpg" },
       { name: "arvore", img: "imagens/arvore.jpg" },
       { name: "avião", img: "imagens/aviao.jpg" },
       { name: "barco", img: "imagens/barco.jpg" },
@@ -142,20 +139,6 @@
       { name: "trem", img: "imagens/trem.jpg" }
     ];
 
-    document.addEventListener('DOMContentLoaded',function(){
-      const audio = document.getElementById('sound-correct');
-      const audio2 = document.getElementById('sound-wrong');
-
-      audio.volume = 0.07;
-      audio2.volume = 0.07;
-
-    });
-
-    // embaralha a lista
-    let shuffledAnimals = [...animals].sort(() => Math.random() - 0.5);
-    let index = 0;
-    let score = 0;
-
     const photo = document.getElementById("photo");
     const roundEl = document.getElementById("round");
     const totalEl = document.getElementById("total");
@@ -165,40 +148,53 @@
     const soundCorrect = document.getElementById("sound-correct");
     const soundWrong = document.getElementById("sound-wrong");
 
+    let shuffledAnimals = [...animals].sort(() => Math.random() - 0.5);
+    let index = 0;
+    let score = 0;
+    let timeoutId = null;
+    let finished = false;
+
     totalEl.textContent = animals.length;
 
-    // normaliza acentos e cedilhas
+    document.addEventListener('DOMContentLoaded', function () {
+      soundCorrect.volume = 0.07;
+      soundWrong.volume = 0.07;
+    });
+
     function normalize(text) {
       return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     function loadAnimal() {
-      if (index >= shuffledAnimals.length) {
-
-        photo.src = "";
-        resultEl.innerHTML = `🏆 Fim do jogo! Pontuação final: ${score}`;
-        const btn = document.createElement("button");
-        btn.textContent = "🔁 Jogar novamente";
-        btn.onclick = restart;
-        resultEl.appendChild(document.createElement("br"));
-        resultEl.appendChild(btn);
-        clearTimeout(timeoutId);
-        return;
-      }
+      if (finished || index >= shuffledAnimals.length) return;
       photo.src = shuffledAnimals[index].img;
-      photo.onerror = () => { photo.src = "imagens/erro.jpg"; };
       roundEl.textContent = index + 1;
       answerEl.value = "";
       resultEl.textContent = "";
     }
 
+    function finishGame() {
+      finished = true;
+      clearTimeout(timeoutId);
+      photo.src = "";
+      resultEl.innerHTML = `🏆 Fim do jogo! Pontuação final: ${score}`;
+      const btn = document.createElement("button");
+      btn.textContent = "🔁 Jogar novamente";
+      btn.onclick = () => location.reload();
+      resultEl.appendChild(document.createElement("br"));
+      resultEl.appendChild(btn);
+    }
+
     function checkAnswer() {
+      if (finished) return;
+
       const guess = normalize(answerEl.value.trim().toLowerCase());
       if (!guess) return;
 
-      const correctNames = Array.isArray(shuffledAnimals[index].name)
-        ? shuffledAnimals[index].name.map(n => normalize(n))
-        : [normalize(shuffledAnimals[index].name)];
+      const current = shuffledAnimals[index];
+      const correctNames = Array.isArray(current.name)
+        ? current.name.map(n => normalize(n))
+        : [normalize(current.name)];
 
       if (correctNames.includes(guess)) {
         resultEl.textContent = "🎉 Correto!";
@@ -206,28 +202,27 @@
         score++;
         soundCorrect.play();
       } else {
-        resultEl.textContent = `😿 Errado! Era: ${shuffledAnimals[index].name}`;
+        const displayName = Array.isArray(current.name) ? current.name[0] : current.name;
+        resultEl.textContent = `😿 Errado! Era: ${displayName}`;
         resultEl.className = "result no";
         soundWrong.play();
       }
 
       scoreEl.textContent = score;
       index++;
-      setTimeout(loadAnimal, 1500);
-    }
 
-    function restart() {
-      index = 0;
-      score = 0;
-      scoreEl.textContent = score;
-      shuffledAnimals = [...animals].sort(() => Math.random() - 0.5);
-      loadAnimal();
+      if (index >= shuffledAnimals.length) {
+        finishGame();
+      } else {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          if (!finished) loadAnimal();
+        }, 1500);
+      }
     }
 
     document.getElementById("check").addEventListener("click", checkAnswer);
-    answerEl.addEventListener("keydown", e => {
-      if (e.key === "Enter") checkAnswer();
-    });
+    answerEl.addEventListener("keydown", e => { if (e.key === "Enter") checkAnswer(); });
 
     loadAnimal();
   </script>
