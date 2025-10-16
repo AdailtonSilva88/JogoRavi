@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jogo das Figuras</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(to bottom, #ffecd2, #fcb69f);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #333;
+    }
+
+    .app {
+      background: #fff3cd;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      border: 4px solid #ffb347;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      color: #ff7043;
+      font-size: 2rem;
+    }
+
+    img {
+      width: 300px;
+      height: 300px;
+      object-fit: contain;
+      border-radius: 15px;
+      border: 3px solid #ffb347;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid #ffa726;
+      width: 70%;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 10px 16px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #ff7043;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #f4511e;
+    }
+
+    .result {
+      margin-top: 12px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .ok {
+      color: #2e7d32;
+      animation: bounce 0.6s;
+    }
+
+    .no {
+      color: #c62828;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.1);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>Jogo das Figuras</h1>
+    <p>Rodada <span id="round">1</span>/<span id="total">21</span></p>
+    <img id="photo" alt="Animal" src="">
+    <div>
+      <input id="answer" type="text" placeholder="Qual é o animal?">
+      <button id="check">Conferir</button>
+    </div>
+    <div id="result" class="result"></div>
+    <p>Pontos: <span id="score">0</span></p>
+  </div>
+
+  <!-- Sons -->
+
+  <audio id="sound-correct" src="https://www.soundjay.com/buttons/sounds/button-14.mp3"></audio> <audio id="sound-wrong"
+    src="https://www.soundjay.com/buttons/sounds/button-10.mp3" ></audio>
+
+  <script>
+    const animals = [
+      { name: ["cachorro", "cão"], img: "imagens/cachorro.jpg" },
+      { name: "cavalo", img: "imagens/cavalo.jpg" },
+      { name: "elefante", img: "imagens/elefante.jpg" },
+      { name: "galinha", img: "imagens/galinha.jpg" },
+      { name: "gato", img: "imagens/gato.jpg" },
+      { name: "girafa", img: "imagens/girafa.jpg" },
+      { name: "jacaré", img: "imagens/jacare.jpg" },
+      { name: "leão", img: "imagens/leao.jpg" },
+      { name: "vaca", img: "imagens/vaca.jpg" },
+      { name: "zebra", img: "imagens/zebra.jpg" },
+      { name: "porco", img: "imagens/porco.jpg" },
+      { name: "martelo", img: "imagens/martelo.jpg" },
+      { name: ["papai noel", "noel"], img: "imagens/papai-noel.jpg" },
+      { name: "arvore", img: "imagens/arvore.jpg" },
+      { name: "avião", img: "imagens/aviao.jpg" },
+      { name: "barco", img: "imagens/barco.jpg" },
+      { name: "carro", img: "imagens/carro.jpg" },
+      { name: "casa", img: "imagens/casa.jpg" },
+      { name: "tesoura", img: "imagens/tesoura.jpg" },
+      { name: ["tv", "televisão"], img: "imagens/tv.jpg" },
+      { name: "trem", img: "imagens/trem.jpg" }
+    ];
+
+    document.addEventListener('DOMContentLoaded',function(){
+      const audio = document.getElementById('sound-correct');
+      const audio2 = document.getElementById('sound-wrong');
+
+      audio.volume = 0.07;
+      audio2.volume = 0.07;
+
+    });
+
+    // embaralha a lista
+    let shuffledAnimals = [...animals].sort(() => Math.random() - 0.5);
+    let index = 0;
+    let score = 0;
+
+    const photo = document.getElementById("photo");
+    const roundEl = document.getElementById("round");
+    const totalEl = document.getElementById("total");
+    const scoreEl = document.getElementById("score");
+    const answerEl = document.getElementById("answer");
+    const resultEl = document.getElementById("result");
+    const soundCorrect = document.getElementById("sound-correct");
+    const soundWrong = document.getElementById("sound-wrong");
+
+    totalEl.textContent = animals.length;
+
+    // normaliza acentos e cedilhas
+    function normalize(text) {
+      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function loadAnimal() {
+      if (index >= shuffledAnimals.length) {
+
+        photo.src = "";
+        resultEl.innerHTML = `🏆 Fim do jogo! Pontuação final: ${score}`;
+        const btn = document.createElement("button");
+        btn.textContent = "🔁 Jogar novamente";
+        btn.onclick = restart;
+        resultEl.appendChild(document.createElement("br"));
+        resultEl.appendChild(btn);
+        clearTimeout(timeoutId);
+        return;
+      }
+      photo.src = shuffledAnimals[index].img;
+      photo.onerror = () => { photo.src = "imagens/erro.jpg"; };
+      roundEl.textContent = index + 1;
+      answerEl.value = "";
+      resultEl.textContent = "";
+    }
+
+    function checkAnswer() {
+      const guess = normalize(answerEl.value.trim().toLowerCase());
+      if (!guess) return;
+
+      const correctNames = Array.isArray(shuffledAnimals[index].name)
+        ? shuffledAnimals[index].name.map(n => normalize(n))
+        : [normalize(shuffledAnimals[index].name)];
+
+      if (correctNames.includes(guess)) {
+        resultEl.textContent = "🎉 Correto!";
+        resultEl.className = "result ok";
+        score++;
+        soundCorrect.play();
+      } else {
+        resultEl.textContent = `😿 Errado! Era: ${shuffledAnimals[index].name}`;
+        resultEl.className = "result no";
+        soundWrong.play();
+      }
+
+      scoreEl.textContent = score;
+      index++;
+      setTimeout(loadAnimal, 1500);
+    }
+
+    function restart() {
+      index = 0;
+      score = 0;
+      scoreEl.textContent = score;
+      shuffledAnimals = [...animals].sort(() => Math.random() - 0.5);
+      loadAnimal();
+    }
+
+    document.getElementById("check").addEventListener("click", checkAnswer);
+    answerEl.addEventListener("keydown", e => {
+      if (e.key === "Enter") checkAnswer();
+    });
+
+    loadAnimal();
+  </script>
+
+</body>
+
+</html>
